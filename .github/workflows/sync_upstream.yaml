@@ -32,6 +32,7 @@ jobs:
           git remote add upstream https://github.com/golang/oauth2.git
           git fetch --tags upstream
 
+          git rev-parse HEAD
           git rev-parse test-workflow
           git rev-parse upstream/master
           git merge --allow-unrelated-histories --no-edit upstream/master
