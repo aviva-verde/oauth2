@@ -34,7 +34,7 @@ jobs:
 
           git rev-parse master
           git rev-parse upstream/master
-#          git merge --allow-unrelated-histories --no-edit upstream/master
+          git merge --allow-unrelated-histories --no-edit upstream/master
 #          git push origin master
 
 #      - name: On Fail, Send Message About Merge to Slack
