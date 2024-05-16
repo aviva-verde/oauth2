@@ -25,13 +25,13 @@ jobs:
           git config --global user.name 'upstream-sync-bot'
           git config --global user.email 'upstream-sync-bot@users.noreply.github.com'
           git config --global push.followTags true
-
-          git pull 
+          
+          git pull
+          git checkout master
 
           git remote add upstream https://github.com/golang/oauth2.git
           git fetch --tags upstream
 
-          git checkout master
           git merge --allow-unrelated-histories --no-edit upstream/master
           git push origin master 
 
