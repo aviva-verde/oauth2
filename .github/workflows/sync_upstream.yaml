@@ -6,39 +6,52 @@ name: Sync upstream oauth2 repo
 on:
   workflow_dispatch:
   schedule:
-    - cron:  '0 9 * * 1'
+    - cron: "0 9 * * 1"
     # run once a week on monday morning
     # if it fails
     #   send slack message (iw-engineering or integration-inovators)
-    
 
 permissions:
   contents: write
 
 jobs:
-  merge:
+  sync:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Merge upstream
+        with:
+          ref: master
+          fetch-depth: 0 # https://stackoverflow.com/questions/71819174/shallow-update-not-allowed-with-github-actions/71819349#71819349
+
+      - name: Set Github Config
         run: |
           git config --global user.name 'upstream-sync-bot'
           git config --global user.email 'upstream-sync-bot@users.noreply.github.com'
           git config --global push.followTags true
-          
-          git pull
-          git checkout master
 
+      - name: Merge upstream
+        id: merge-upstream
+        run: |
           git remote add upstream https://github.com/golang/oauth2.git
           git fetch --tags upstream
 
-          git merge --allow-unrelated-histories --no-edit upstream/master
-          git push origin master 
+          trap 'echo "$merge_result"' EXIT
+
+          merge_result=$(git merge --allow-unrelated-histories --no-edit upstream/master 2>&1)
+
+          if [ "$merge_result" == "Already up to date." ]; then
+            echo "already_updated=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push changes
+        id: push-changes
+        if: ${{ success() && steps.merge-upstream.outputs.already_updated != 'true' }}
+        run: git push origin master
 
       - name: On Fail, Send Message About Merge to Slack
-        if: ${{ failure() }}
-        uses: archive/github-actions-slack@v2.8.0
         id: notify-slack
+        if: failure()
+        uses: archive/github-actions-slack@v2.8.0
         env:
           ACTIONS_STEP_DEBUG: true
           ACTIONS_RUNNER_DEBUG: true
@@ -49,5 +62,5 @@ jobs:
             OAuth2 fork upstream sync failed. [action](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
       - name: Send Slack Message Result
-        if: ${{ failure() }}
+        if: failure()
         run: echo "${{ steps.notify-slack.outputs.slack-result }}"
